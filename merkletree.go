@@ -147,40 +147,24 @@ func (m *Leaf) ToString(f func([]byte) string, n int) string {
 	return fmt.Sprintf("\n"+indent(n, "(L root: %s)"), f(m.checksum))
 }
 
-func (t *Tree) Verify(rootChecksum []byte, leafChecksum []byte) bool {
-	if !bytes.Equal(rootChecksum, t.root.GetChecksum()) {
-		return false
-	}
-
-	var found Node = nil
-	for i := 0; i < len(t.leaves); i++ {
-		if bytes.Equal(leafChecksum, t.leaves[i].GetChecksum()) {
-			found = t.leaves[i]
-		}
-	}
-
-	if found == nil {
-		return false
-	}
-
-	return true
-}
-
 type PathPart struct {
 	left  []byte
 	right []byte
 }
 
-func (t *Tree) GetProofString(rootChecksum []byte, leafChecksum []byte, f func([]byte) string) string {
+func (t *Tree) GetProofForDisplay(rootChecksum []byte, leafChecksum []byte, f func([]byte) string) string {
 	var lines []string
 
 	parts := t.AuditPath(rootChecksum, leafChecksum)
 	if len(parts) == 0 {
-		return ""
+		return "" // checksums don't match up with receiver
 	}
 
 	for _, part := range parts {
-		lines = append(lines, fmt.Sprintf("%s + %s = %s", f(part.left), f(part.right), f(t.checksumFunc(append(part.left, part.right...)))))
+		l := f(part.left)
+		r := f(part.right)
+		c := f(t.checksumFunc(append(part.left, part.right...)))
+		lines = append(lines, fmt.Sprintf("%s + %s = %s", l, r, c))
 	}
 
 	return strings.Join(lines, "\n")

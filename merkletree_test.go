@@ -138,27 +138,8 @@ func TestCreateMerkleTree(t *testing.T) {
 	})
 }
 
-func TestConsistencyProof(t *testing.T) {
-	blocksA := [][]byte{[]byte("alpha"), []byte("beta"), []byte("kappa")}
-	treeA := NewTree(IdentityHashForTest, blocksA)
-
-	blocksB := [][]byte{[]byte("alpha"), []byte("beta")}
-	treeB := NewTree(IdentityHashForTest, blocksB)
-
-	t.Run("Tree#Verify presented Merkle root (checksum) does not match receiving tree", func(t *testing.T) {
-		if treeB.Verify(treeA.root.GetChecksum(), []byte("beta")) {
-			s := "should have failed (different checksums) - treeA: %s treeB: %s"
-			t.Fatalf(s, treeA.root.GetChecksum(), treeB.root.GetChecksum())
-		}
-	})
-
-	t.Run("Tree#Verify presented leaf checksum does not exist in receiving tree", func(t *testing.T) {
-		if treeB.Verify(treeB.root.GetChecksum(), []byte("kappa")) {
-			t.Fatal("should have failed (leaf shouldn't exist in receiver's cache")
-		}
-	})
-
-	t.Run("Tree#GetProofString", func(t *testing.T) {
+func TestAuditProof(t *testing.T) {
+	t.Run("Tree#GetProofForDisplay", func(t *testing.T) {
 		blocks := [][]byte{
 			[]byte("alpha"),
 			[]byte("beta"),
@@ -171,12 +152,12 @@ func TestConsistencyProof(t *testing.T) {
 		}
 
 		tree := NewTree(IdentityHashForTest, blocks)
-		checksum := treeA.checksumFunc([]byte("omega"))
+		checksum := tree.checksumFunc([]byte("omega"))
 
 		f := func(xs []byte) string {
 			return string(xs)
 		}
 
-		expectStrEqual(t, tree.GetProofString(tree.root.GetChecksum(), checksum, f), proofA)
+		expectStrEqual(t, tree.GetProofForDisplay(tree.root.GetChecksum(), checksum, f), proofA)
 	})
 }
