@@ -19,21 +19,17 @@ type Tree struct {
 type Node interface {
 	GetChecksum() []byte
 	ToString(checksumToStrFunc, int) string
-	SetParent(*Branch)
-	GetParent() *Branch
 }
 
 type Branch struct {
 	checksum []byte
 	left     Node
 	right    Node
-	parent   *Branch
 }
 
 type Leaf struct {
 	checksum []byte
 	block    []byte
-	parent   *Branch
 }
 
 type ProofPart struct {
@@ -53,20 +49,18 @@ type checksumToStrFunc func([]byte) string
 // CONSTRUCTORS
 ///////////////
 
-func NewLeaf(sumFunc func([]byte) []byte, block []byte, parent *Branch) *Leaf {
+func NewLeaf(sumFunc func([]byte) []byte, block []byte) *Leaf {
 	return &Leaf{
 		checksum: sumFunc(block),
 		block:    block,
-		parent:   parent,
 	}
 }
 
-func NewBranch(sumFunc func([]byte) []byte, left Node, right Node, parent *Branch) *Branch {
+func NewBranch(sumFunc func([]byte) []byte, left Node, right Node) *Branch {
 	return &Branch{
 		checksum: sumFunc(append(left.GetChecksum(), right.GetChecksum()...)),
 		left:     left,
 		right:    right,
-		parent:   parent,
 	}
 }
 
@@ -78,7 +72,7 @@ func NewTree(sumFunc func([]byte) []byte, blocks [][]byte) *Tree {
 
 	// build our base of leaves
 	for i := 0; i < len(blocks); i++ {
-		rows[0] = append(rows[0], NewLeaf(sumFunc, blocks[i], nil))
+		rows[0] = append(rows[0], NewLeaf(sumFunc, blocks[i]))
 	}
 
 	// build upwards until we hit the root
@@ -99,9 +93,7 @@ func NewTree(sumFunc func([]byte) []byte, blocks [][]byte) *Tree {
 			}
 
 			// yuck
-			b := NewBranch(sumFunc, l, r, nil)
-			l.SetParent(b)
-			r.SetParent(b)
+			b := NewBranch(sumFunc, l, r)
 
 			rows[i] = append(rows[i], b)
 		}
@@ -118,24 +110,8 @@ func NewTree(sumFunc func([]byte) []byte, blocks [][]byte) *Tree {
 // METHODS
 //////////
 
-func (b *Branch) SetParent(parent *Branch) {
-	b.parent = parent
-}
-
-func (b *Branch) GetParent() *Branch {
-	return b.parent
-}
-
 func (b *Branch) GetChecksum() []byte {
 	return b.checksum
-}
-
-func (l *Leaf) SetParent(parent *Branch) {
-	l.parent = parent
-}
-
-func (l *Leaf) GetParent() *Branch {
-	return l.parent
 }
 
 func (l *Leaf) GetChecksum() []byte {
