@@ -9,6 +9,13 @@ Clifton's [_Understanding Merkle Trees - Why use them, who uses them, and how to
 
 *This is alpha software.*
 
+## Acknowledgements
+
+This implementation was inspired by:
+
+- [Marc Clifton's _Understanding Merkle Trees - Why use them, who uses them, and how to use them_][1]
+- [Miguel Mota's merkle-tree][2] (in particular: proof generation)
+
 ## Usage
 
 ### Construction
@@ -82,3 +89,4 @@ alphabetakappagamma + epsilonomegamuzeta = alphabetakappagammaepsilonomegamuzeta
 ```
 
 [1]: https://www.codeproject.com/Articles/1176140/Understanding-Merkle-Trees-Why-use-them-who-uses-t
+[2]: https://github.com/miguelmota/merkle-tree
