@@ -2,10 +2,8 @@ package merkletree
 
 import (
 	"bytes"
-	"fmt"
 	"gx/ipfs/QmVmDhyTTUcQXFD1rRQ64fGLMSAoaQvNH3hwuaCFAPq2hy/errors"
 	"math"
-	"strings"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -20,7 +18,7 @@ type Tree struct {
 
 type Node interface {
 	GetChecksum() []byte
-	ToString(func([]byte) string, int) string
+	ToString(checksumToStrFunc, int) string
 	SetParent(*Branch)
 	GetParent() *Branch
 }
@@ -48,6 +46,8 @@ type Proof struct {
 	target []byte
 	root   []byte
 }
+
+type checksumToStrFunc func([]byte) string
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // CONSTRUCTORS
@@ -118,67 +118,28 @@ func NewTree(sumFunc func([]byte) []byte, blocks [][]byte) *Tree {
 // METHODS
 //////////
 
-func (m *Branch) SetParent(parent *Branch) {
-	m.parent = parent
+func (b *Branch) SetParent(parent *Branch) {
+	b.parent = parent
 }
 
-func (m *Branch) GetParent() *Branch {
-	return m.parent
+func (b *Branch) GetParent() *Branch {
+	return b.parent
 }
 
-func (m *Branch) GetChecksum() []byte {
-	return m.checksum
+func (b *Branch) GetChecksum() []byte {
+	return b.checksum
 }
 
-func (m *Branch) ToString(checksumToString func([]byte) string, n int) string {
-	c := checksumToString(m.checksum)
-	l := m.left.ToString(checksumToString, n+2)
-	r := m.right.ToString(checksumToString, n+2)
-
-	return fmt.Sprintf("\n"+indent(n, "(B root: %s %s %s)"), c, l, r)
+func (l *Leaf) SetParent(parent *Branch) {
+	l.parent = parent
 }
 
-func (m *Leaf) SetParent(parent *Branch) {
-	m.parent = parent
+func (l *Leaf) GetParent() *Branch {
+	return l.parent
 }
 
-func (m *Leaf) GetParent() *Branch {
-	return m.parent
-}
-
-func (m *Leaf) GetChecksum() []byte {
-	return m.checksum
-}
-
-func (m *Leaf) ToString(f func([]byte) string, n int) string {
-	return fmt.Sprintf("\n"+indent(n, "(L root: %s)"), f(m.checksum))
-}
-
-func (m Proof) ToString(f func([]byte) string) string {
-	var lines []string
-
-	parts := m.parts
-	if len(parts) == 0 {
-		return "" // checksums don't match up with receiver
-	}
-
-	lines = append(lines, fmt.Sprintf("route from %s (leaf) to %s (root):", f(m.target), f(m.root)))
-	lines = append(lines, "")
-
-	var prev = m.target
-	var curr []byte
-	for i := 0; i < len(parts); i++ {
-		if parts[i].isRight {
-			curr = append(prev, parts[i].checksum...)
-			lines = append(lines, fmt.Sprintf("%s + %s = %s", f(prev), f(parts[i].checksum), f(curr)))
-		} else {
-			curr = append(parts[i].checksum, prev...)
-			lines = append(lines, fmt.Sprintf("%s + %s = %s", f(parts[i].checksum), f(prev), f(curr)))
-		}
-		prev = curr
-	}
-
-	return strings.Join(lines, "\n")
+func (l *Leaf) GetChecksum() []byte {
+	return l.checksum
 }
 
 func (t *Tree) GetProof(rootChecksum []byte, leafChecksum []byte) (*Proof, error) {
@@ -230,21 +191,4 @@ func (t *Tree) GetProof(rootChecksum []byte, leafChecksum []byte) (*Proof, error
 		target: leafChecksum,
 		root:   rootChecksum,
 	}, nil
-}
-
-func (t *Tree) ToString(f func([]byte) string, n int) string {
-	return t.root.ToString(f, n)
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// HELPERS
-//////////
-
-func indent(spaces int, orig string) string {
-	str := ""
-	for i := 0; i < spaces; i++ {
-		str += " "
-	}
-
-	return str + orig
 }

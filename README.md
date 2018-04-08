@@ -1,13 +1,13 @@
 # go-merkle-tree
 
-> A Merkle Tree, implemented in Golang
+> A Bitcoin Merkle Tree, implemented in Go
 
 Many people have written many things about Merkle Trees. For a good overview (uses, characteristics, etc.), read Marc
 Clifton's [_Understanding Merkle Trees - Why use them, who uses them, and how to use them_][1].
 
 ## Warning
 
-*Warning: This is alpha software.*
+*This is alpha software.*
 
 ## Usage
 
@@ -18,7 +18,7 @@ data := [][]byte{[]byte("alpha"), []byte("beta"), []byte("kappa")}
 
 tree := CreateTree(Sha256DoubleHash, data)
 
-fmt.Println(tree.AsString(hex.EncodeToString, 0))
+fmt.Println(tree.ToString(hex.EncodeToString, 0))
 
 /*
 
@@ -48,7 +48,7 @@ blocks := [][]byte{
 tree := NewTree(IdentityHashForTest, blocks)
 checksum := tree.checksumFunc([]byte("alpha"))
 
-proof, e := tree.GetProof(tree.root.GetChecksum(), checksum)
+proof, _ := tree.GetProof(tree.root.GetChecksum(), checksum)
 ```
 
 ### Print Audit Proof
