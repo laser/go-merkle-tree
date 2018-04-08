@@ -3,6 +3,7 @@ package merkletree
 import (
 	"bytes"
 	"fmt"
+	"gx/ipfs/QmVmDhyTTUcQXFD1rRQ64fGLMSAoaQvNH3hwuaCFAPq2hy/errors"
 	"math"
 	"strings"
 )
@@ -13,7 +14,7 @@ import (
 
 type Tree struct {
 	root         Node
-	leaves       []*Leaf
+	rows         [][]Node
 	checksumFunc func([]byte) []byte
 }
 
@@ -35,6 +36,17 @@ type Leaf struct {
 	checksum []byte
 	block    []byte
 	parent   *Branch
+}
+
+type ProofPart struct {
+	isRight  bool
+	checksum []byte
+}
+
+type Proof struct {
+	parts  []*ProofPart
+	target []byte
+	root   []byte
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -95,14 +107,9 @@ func NewTree(sumFunc func([]byte) []byte, blocks [][]byte) *Tree {
 		}
 	}
 
-	leaves := make([]*Leaf, len(rows[0]))
-	for i := 0; i < len(leaves); i++ {
-		leaves[i] = rows[0][i].(*Leaf)
-	}
-
 	return &Tree{
 		checksumFunc: sumFunc,
-		leaves:       leaves,
+		rows:         rows,
 		root:         rows[len(rows)-1][0],
 	}
 }
@@ -147,93 +154,86 @@ func (m *Leaf) ToString(f func([]byte) string, n int) string {
 	return fmt.Sprintf("\n"+indent(n, "(L root: %s)"), f(m.checksum))
 }
 
-type PathPart struct {
-	left  []byte
-	right []byte
-}
-
-func (t *Tree) GetProofForDisplay(rootChecksum []byte, leafChecksum []byte, f func([]byte) string) string {
+func (m Proof) ToString(f func([]byte) string) string {
 	var lines []string
 
-	parts := t.AuditPath(rootChecksum, leafChecksum)
+	parts := m.parts
 	if len(parts) == 0 {
 		return "" // checksums don't match up with receiver
 	}
 
-	for _, part := range parts {
-		l := f(part.left)
-		r := f(part.right)
-		c := f(t.checksumFunc(append(part.left, part.right...)))
-		lines = append(lines, fmt.Sprintf("%s + %s = %s", l, r, c))
+	lines = append(lines, fmt.Sprintf("route from %s (leaf) to %s (root):", f(m.target), f(m.root)))
+	lines = append(lines, "")
+
+	var prev = m.target
+	var curr []byte
+	for i := 0; i < len(parts); i++ {
+		if parts[i].isRight {
+			curr = append(prev, parts[i].checksum...)
+			lines = append(lines, fmt.Sprintf("%s + %s = %s", f(prev), f(parts[i].checksum), f(curr)))
+		} else {
+			curr = append(parts[i].checksum, prev...)
+			lines = append(lines, fmt.Sprintf("%s + %s = %s", f(parts[i].checksum), f(prev), f(curr)))
+		}
+		prev = curr
 	}
 
 	return strings.Join(lines, "\n")
 }
 
-// AuditPath returns the path from leaf to root.
-func (t *Tree) AuditPath(rootChecksum []byte, leafChecksum []byte) []PathPart {
-	var pathParts []PathPart
+func (t *Tree) GetProof(rootChecksum []byte, leafChecksum []byte) (*Proof, error) {
+	var parts []*ProofPart
 
 	if !bytes.Equal(rootChecksum, t.root.GetChecksum()) {
-		return pathParts
+		return nil, errors.New("root checksums don't match")
 	}
 
-	found := t.getLeafByChecksum(leafChecksum)
-	if found == nil {
-		return pathParts
+	index := -1
+	for i := 0; i < len(t.rows[0]); i++ {
+		if bytes.Equal(leafChecksum, t.rows[0][i].GetChecksum()) {
+			index = i
+			break
+		}
 	}
 
-	// start with the immediate parent of the target checksum
-	fparent := found.GetParent
-	if bytes.Equal(leafChecksum, fparent().left.GetChecksum()) {
-		pathParts = append(pathParts, PathPart{
-			left:  leafChecksum,
-			right: fparent().right.GetChecksum(),
-		})
-	} else if bytes.Equal(leafChecksum, fparent().right.GetChecksum()) {
-		pathParts = append(pathParts, PathPart{
-			left:  fparent().left.GetChecksum(),
-			right: leafChecksum,
-		})
+	if index == -1 {
+		return nil, errors.New("target not found in receiver")
 	}
 
-	// once we've computed the checksum of the target + its sibling, work our way up towards the root
-	gparent := fparent().GetParent()
-	for gparent != nil {
-		h := t.checksumFunc(append(pathParts[len(pathParts)-1].left, pathParts[len(pathParts)-1].right...))
-
-		if bytes.Equal(h, gparent.left.GetChecksum()) {
-			pathParts = append(pathParts, PathPart{
-				left:  h,
-				right: gparent.right.GetChecksum(),
+	for i := 0; i < len(t.rows)-1; i++ {
+		if index%2 == 1 {
+			// is right, so go back one to get left
+			parts = append(parts, &ProofPart{
+				isRight:  false,
+				checksum: t.rows[i][index-1].GetChecksum(),
 			})
-		} else if bytes.Equal(h, gparent.right.GetChecksum()) {
-			pathParts = append(pathParts, PathPart{
-				left:  gparent.left.GetChecksum(),
-				right: h,
+		} else {
+			var checksum []byte
+			if (index + 1) < len(t.rows[i]) {
+				checksum = t.rows[i][index+1].GetChecksum()
+			} else {
+				checksum = t.rows[i][index].GetChecksum()
+			}
+
+			// is left, so go one forward to get hash pair
+			parts = append(parts, &ProofPart{
+				isRight:  true,
+				checksum: checksum,
 			})
 		}
 
-		gparent = gparent.parent
+		index = int(math.Floor(float64(index / 2)))
 	}
 
-	return pathParts
+	return &Proof{
+		parts:  parts,
+		target: leafChecksum,
+		root:   rootChecksum,
+	}, nil
 }
 
 func (t *Tree) ToString(f func([]byte) string, n int) string {
 	return t.root.ToString(f, n)
-}
-
-func (t *Tree) getLeafByChecksum(checksum []byte) *Leaf {
-	var found *Leaf = nil
-
-	for i := 0; i < len(t.leaves); i++ {
-		if bytes.Equal(checksum, t.leaves[i].GetChecksum()) {
-			found = t.leaves[i]
-		}
-	}
-
-	return found
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

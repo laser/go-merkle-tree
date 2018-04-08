@@ -35,10 +35,25 @@ output:
 */
 ```
 
-### Audit Proof
+### Get Audit Proof
 
 ```go
 
+blocks := [][]byte{
+    []byte("alpha"),
+    []byte("beta"),
+    []byte("kappa"),
+}
+
+tree := NewTree(IdentityHashForTest, blocks)
+checksum := tree.checksumFunc([]byte("alpha"))
+
+proof, e := tree.GetProof(tree.root.GetChecksum(), checksum)
+```
+
+### Print Audit Proof
+
+```go
 blocks := [][]byte{
     []byte("alpha"),
     []byte("beta"),
@@ -51,14 +66,9 @@ blocks := [][]byte{
 }
 
 tree := NewTree(IdentityHashForTest, blocks)
-checksum := treeA.checksumFunc([]byte("omega"))
-
-// for printing checksums
-f := func(xs []byte) string {
-    return string(xs)
-}
-
-fmt.Println(tree.GetProofString(tree.root.GetChecksum(), checksum, f))
+checksum := tree.checksumFunc([]byte("omega"))
+proof, _ := tree.GetProof(tree.root.GetChecksum(), checksum)
+toStr := func(xs []byte) string { return string(xs) }
 
 /*
 

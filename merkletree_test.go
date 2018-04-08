@@ -1,6 +1,7 @@
 package merkletree
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 	"testing"
@@ -72,6 +73,8 @@ var givenSixBlocks = trimNewlines(`
 `)
 
 var proofA = trimNewlines(`
+route from omega (leaf) to alphabetakappagammaepsilonomegamuzeta (root):
+
 epsilon + omega = epsilonomega
 epsilonomega + muzeta = epsilonomegamuzeta
 alphabetakappagamma + epsilonomegamuzeta = alphabetakappagammaepsilonomegamuzeta
@@ -139,7 +142,29 @@ func TestCreateMerkleTree(t *testing.T) {
 }
 
 func TestAuditProof(t *testing.T) {
-	t.Run("Tree#GetProofForDisplay", func(t *testing.T) {
+	t.Run("Tree#GetProof", func(t *testing.T) {
+		blocks := [][]byte{
+			[]byte("alpha"),
+			[]byte("beta"),
+			[]byte("kappa"),
+		}
+
+		tree := NewTree(IdentityHashForTest, blocks)
+		checksum := tree.checksumFunc([]byte("alpha"))
+
+		proof, e := tree.GetProof(tree.root.GetChecksum(), checksum)
+		if e != nil {
+			t.Fail()
+		}
+		if !bytes.Equal(checksum, proof.target) {
+			t.Fail()
+		}
+		if !bytes.Equal(tree.root.GetChecksum(), proof.root) {
+			t.Fail()
+		}
+	})
+
+	t.Run("Proof#ToString", func(t *testing.T) {
 		blocks := [][]byte{
 			[]byte("alpha"),
 			[]byte("beta"),
@@ -153,11 +178,9 @@ func TestAuditProof(t *testing.T) {
 
 		tree := NewTree(IdentityHashForTest, blocks)
 		checksum := tree.checksumFunc([]byte("omega"))
+		proof, _ := tree.GetProof(tree.root.GetChecksum(), checksum)
+		toStr := func(xs []byte) string { return string(xs) }
 
-		f := func(xs []byte) string {
-			return string(xs)
-		}
-
-		expectStrEqual(t, tree.GetProofForDisplay(tree.root.GetChecksum(), checksum, f), proofA)
+		expectStrEqual(t, proof.ToString(toStr), proofA)
 	})
 }
