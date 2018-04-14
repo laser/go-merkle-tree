@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func (m *Proof) ToString(f checksumToStrFunc) string {
+func (m *Proof) ToString(h hashBytesFunc, f checksumToStrFunc) string {
 	var lines []string
 
 	parts := m.parts
@@ -13,17 +13,17 @@ func (m *Proof) ToString(f checksumToStrFunc) string {
 		return "" // checksums don't match up with receiver
 	}
 
-	lines = append(lines, fmt.Sprintf("route from %s (leaf) to %s (root):", f(m.target), f(m.root)))
+	lines = append(lines, fmt.Sprintf("route from %s (leaf) to root:", f(m.target)))
 	lines = append(lines, "")
 
 	var prev = m.target
 	var curr []byte
 	for i := 0; i < len(parts); i++ {
 		if parts[i].isRight {
-			curr = append(prev, parts[i].checksum...)
+			curr = h(append(prev, parts[i].checksum...))
 			lines = append(lines, fmt.Sprintf("%s + %s = %s", f(prev), f(parts[i].checksum), f(curr)))
 		} else {
-			curr = append(parts[i].checksum, prev...)
+			curr = h(append(parts[i].checksum, prev...))
 			lines = append(lines, fmt.Sprintf("%s + %s = %s", f(parts[i].checksum), f(prev), f(curr)))
 		}
 		prev = curr

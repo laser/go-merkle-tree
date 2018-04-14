@@ -40,10 +40,11 @@ type ProofPart struct {
 type Proof struct {
 	parts  []*ProofPart
 	target []byte
-	root   []byte
 }
 
 type checksumToStrFunc func([]byte) string
+
+type hashBytesFunc func([]byte) []byte
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // CONSTRUCTORS
@@ -118,20 +119,47 @@ func (l *Leaf) GetChecksum() []byte {
 	return l.checksum
 }
 
-func (t *Tree) GetProof(rootChecksum []byte, leafChecksum []byte) (*Proof, error) {
+func (t *Tree) VerifyProof(p *Proof) bool {
+	index := t.getLeafIdxByChecksum(p.target)
+
+	if index == -1 {
+		return false
+	}
+
+	z := p.target
+	for i := 0; i < len(t.rows)-1; i++ {
+		if p.parts[i].isRight {
+			z = t.checksumFunc(append(z, p.parts[i].checksum...))
+		} else {
+			z = t.checksumFunc(append(p.parts[i].checksum, z...))
+		}
+
+		index = int(math.Floor(float64(index / 2)))
+	}
+
+	return bytes.Equal(t.root.GetChecksum(), z)
+}
+
+func (t *Tree) getLeafIdxByChecksum(checksum []byte) int {
+	index := -1
+	for i := 0; i < len(t.rows[0]); i++ {
+		if bytes.Equal(checksum, t.rows[0][i].GetChecksum()) {
+			return i
+			break
+		}
+	}
+
+	return index
+}
+
+func (t *Tree) CreateProof(rootChecksum []byte, leafChecksum []byte) (*Proof, error) {
 	var parts []*ProofPart
 
 	if !bytes.Equal(rootChecksum, t.root.GetChecksum()) {
 		return nil, errors.New("root checksums don't match")
 	}
 
-	index := -1
-	for i := 0; i < len(t.rows[0]); i++ {
-		if bytes.Equal(leafChecksum, t.rows[0][i].GetChecksum()) {
-			index = i
-			break
-		}
-	}
+	index := t.getLeafIdxByChecksum(leafChecksum)
 
 	if index == -1 {
 		return nil, errors.New("target not found in receiver")
@@ -165,6 +193,23 @@ func (t *Tree) GetProof(rootChecksum []byte, leafChecksum []byte) (*Proof, error
 	return &Proof{
 		parts:  parts,
 		target: leafChecksum,
-		root:   rootChecksum,
 	}, nil
+}
+
+func (p *Proof) Equals(o *Proof) bool {
+	if !bytes.Equal(p.target, o.target) {
+		return false
+	}
+
+	if len(p.parts) != len(o.parts) {
+		return false
+	}
+
+	ok := true
+
+	for i := 0; i < len(p.parts); i++ {
+		ok = ok && p.parts[i].isRight && o.parts[i].isRight && bytes.Equal(p.parts[i].checksum, o.parts[i].checksum)
+	}
+
+	return ok
 }
