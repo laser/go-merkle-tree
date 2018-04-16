@@ -1,6 +1,7 @@
 package merkletree
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"strings"
@@ -306,6 +307,25 @@ func TestAuditProof(t *testing.T) {
 			}
 		})
 	})
+}
+
+func TestHandlesPreimageAttack(t *testing.T) {
+	blocks := [][]byte{
+		[]byte("alpha"),
+		[]byte("beta"),
+		[]byte("kappa"),
+	}
+
+	tree := NewTree(Sha256DoubleHash, blocks)
+
+	l := append(tree.checksumFunc([]byte("alpha")), tree.checksumFunc([]byte("beta"))...)
+	r := append(tree.checksumFunc([]byte("kappa")), tree.checksumFunc([]byte("kappa"))...)
+
+	tree2 := NewTree(tree.checksumFunc, [][]byte{l, r})
+
+	if bytes.Equal(tree.root.GetChecksum(), tree2.root.GetChecksum()) {
+		t.Fail()
+	}
 }
 
 func TestDocsCreateAndPrintAuditProof(t *testing.T) {
