@@ -13,7 +13,7 @@ import (
 type Tree struct {
 	root         Node
 	rows         [][]Node
-	checksumFunc func([]byte) []byte
+	checksumFunc hashBytesFunc
 }
 
 type Node interface {
@@ -50,14 +50,14 @@ type hashBytesFunc func([]byte) []byte
 // CONSTRUCTORS
 ///////////////
 
-func NewLeaf(sumFunc func([]byte) []byte, block []byte) *Leaf {
+func NewLeaf(sumFunc hashBytesFunc, block []byte) *Leaf {
 	return &Leaf{
 		checksum: sumFunc(block),
 		block:    block,
 	}
 }
 
-func NewBranch(sumFunc func([]byte) []byte, left Node, right Node) *Branch {
+func NewBranch(sumFunc hashBytesFunc, left Node, right Node) *Branch {
 	return &Branch{
 		checksum: sumFunc(append(left.GetChecksum(), right.GetChecksum()...)),
 		left:     left,
@@ -65,7 +65,7 @@ func NewBranch(sumFunc func([]byte) []byte, left Node, right Node) *Branch {
 	}
 }
 
-func NewTree(sumFunc func([]byte) []byte, blocks [][]byte) *Tree {
+func NewTree(sumFunc hashBytesFunc, blocks [][]byte) *Tree {
 	levels := int(math.Ceil(math.Log2(float64(len(blocks)+len(blocks)%2))) + 1)
 
 	// represents each row in the tree, where rows[0] is the base and rows[len(rows)-1] is the root
