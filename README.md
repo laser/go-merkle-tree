@@ -88,21 +88,9 @@ blocks := [][]byte{
 
 tree := NewTree(Sha256DoubleHash, blocks)
 
-
-
-proof := &Proof{
-    parts: []*ProofPart{{
-        isRight:  true,
-        checksum: tree.checksumFunc(true, []byte("beta")),
-    }, {
-        isRight: true,
-        checksum: tree.checksumFunc(
-            false,
-            append(
-                tree.checksumFunc(true, []byte("kappa")),
-                tree.checksumFunc(true, []byte("kappa"))...)),
-    }},
-    target: tree.checksumFunc(true, []byte("alpha")),
+proof, err := tree.CreateProof(tree.checksumFunc(true, []byte("alpha")))
+if err != nil {
+    panic(err)
 }
 
 tree.VerifyProof(proof) // true
