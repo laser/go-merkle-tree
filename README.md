@@ -61,7 +61,7 @@ tree := NewTree(Sha256DoubleHash, blocks)
 checksum := tree.checksumFunc(true, []byte("alpha"))
 proof, _ := tree.CreateProof(checksum)
 
-fmt.Println(proof.ToString(tree.checksumFunc, func(bytes []byte) string {
+fmt.Println(proof.ToString(func(bytes []byte) string {
     return hex.EncodeToString(bytes)[0:16]
 }))
 

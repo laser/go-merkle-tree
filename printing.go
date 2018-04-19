@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func (m *Proof) ToString(checksumFunc func(isLeaf bool, block []byte) []byte, f checksumToStrFunc) string {
+func (m *Proof) ToString(f checksumToStrFunc) string {
 	var lines []string
 
 	parts := m.parts
@@ -20,10 +20,10 @@ func (m *Proof) ToString(checksumFunc func(isLeaf bool, block []byte) []byte, f 
 	var curr []byte
 	for i := 0; i < len(parts); i++ {
 		if parts[i].isRight {
-			curr = checksumFunc(false, append(prev, parts[i].checksum...))
+			curr = m.checksumFunc(false, append(prev, parts[i].checksum...))
 			lines = append(lines, fmt.Sprintf("%s + %s = %s", f(prev), f(parts[i].checksum), f(curr)))
 		} else {
-			curr = checksumFunc(false, append(parts[i].checksum, prev...))
+			curr = m.checksumFunc(false, append(parts[i].checksum, prev...))
 			lines = append(lines, fmt.Sprintf("%s + %s = %s", f(parts[i].checksum), f(prev), f(curr)))
 		}
 		prev = curr

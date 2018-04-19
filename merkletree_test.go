@@ -199,7 +199,7 @@ func TestAuditProof(t *testing.T) {
 		target := tree.checksumFunc(true, []byte("omega"))
 		proof, _ := tree.CreateProof(target)
 
-		expectStrEqual(t, proof.ToString(tree.checksumFunc, bytesToStrForTest), proofA)
+		expectStrEqual(t, proof.ToString(bytesToStrForTest), proofA)
 	})
 
 	t.Run("Tree#VerifyProof", func(t *testing.T) {
@@ -344,7 +344,7 @@ func TestDocsCreateAndPrintAuditProof(t *testing.T) {
 	target := tree.checksumFunc(true, []byte("alpha"))
 	proof, _ := tree.CreateProof(target)
 
-	fmt.Println(proof.ToString(tree.checksumFunc, func(bytes []byte) string {
+	fmt.Println(proof.ToString(func(bytes []byte) string {
 		return hex.EncodeToString(bytes)[0:16]
 	}))
 }

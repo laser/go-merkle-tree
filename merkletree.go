@@ -38,8 +38,9 @@ type ProofPart struct {
 }
 
 type Proof struct {
-	parts  []*ProofPart
-	target []byte
+	checksumFunc func(isLeaf bool, xs []byte) []byte
+	parts        []*ProofPart
+	target       []byte // checksum of some block
 }
 
 type checksumToStrFunc func([]byte) string
@@ -192,8 +193,9 @@ func (t *Tree) CreateProof(leafChecksum []byte) (*Proof, error) {
 	}
 
 	return &Proof{
-		parts:  parts,
-		target: leafChecksum,
+		checksumFunc: t.checksumFunc,
+		parts:        parts,
+		target:       leafChecksum,
 	}, nil
 }
 
