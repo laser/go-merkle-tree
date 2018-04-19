@@ -372,7 +372,7 @@ func TestDocsValidateProof(t *testing.T) {
 
 	tree := NewTree(Sha256DoubleHash, blocks)
 
-	proof, err := tree.CreateProof(tree.checksumFunc(true, []byte("alpha")))
+	proof, err := tree.CreateProof(tree.rows[0][0].GetChecksum())
 	if err != nil {
 		panic(err)
 	}
