@@ -2,6 +2,8 @@
 
 > A Bitcoin Merkle Tree, implemented in Go
 
+![hash_tree svg](https://user-images.githubusercontent.com/884507/38965622-dd84aa3e-4332-11e8-97be-625e81952d4c.png)
+
 Many people have written many things about Merkle Trees. For a good overview (uses, characteristics, etc.), read Marc
 Clifton's [_Understanding Merkle Trees - Why use them, who uses them, and how to use them_][1].
 
