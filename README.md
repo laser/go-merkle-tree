@@ -88,6 +88,8 @@ blocks := [][]byte{
 
 tree := NewTree(Sha256DoubleHash, blocks)
 
+
+
 proof := &Proof{
     parts: []*ProofPart{{
         isRight:  true,
