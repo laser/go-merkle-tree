@@ -8,12 +8,17 @@ import (
 	"testing"
 )
 
-func bytesToStr(xs []byte) string {
-	return string(xs)
-}
+// drops the unprintable prefix
+func bytesToStrForTest(xs []byte) string {
+	var xs2 []byte
 
-func bytesToHexStr(xs []byte) string {
-	return hex.EncodeToString(xs)[:16]
+	for i, c := range xs {
+		if c < 128 && c > 31 {
+			xs2 = append(xs2, xs[i])
+		}
+	}
+
+	return string(xs2)
 }
 
 func trimNewlines(str string) string {
@@ -90,21 +95,21 @@ func TestCreateMerkleTree(t *testing.T) {
 		blocks := [][]byte{[]byte("alpha"), []byte("beta")}
 		tree := NewTree(IdentityHashForTest, blocks)
 
-		expectStrEqual(t, tree.ToString(bytesToStr, 0), givenTwoBlocks)
+		expectStrEqual(t, tree.ToString(bytesToStrForTest, 0), givenTwoBlocks)
 	})
 
 	t.Run("two levels of nodes", func(t *testing.T) {
 		blocks := [][]byte{[]byte("alpha"), []byte("beta"), []byte("kappa"), []byte("gamma")}
 		tree := NewTree(IdentityHashForTest, blocks)
 
-		expectStrEqual(t, tree.ToString(bytesToStr, 0), givenFourBlocks)
+		expectStrEqual(t, tree.ToString(bytesToStrForTest, 0), givenFourBlocks)
 	})
 
 	t.Run("one block - one level", func(t *testing.T) {
 		blocks := [][]byte{[]byte("alpha")}
 		tree := NewTree(IdentityHashForTest, blocks)
 
-		expectStrEqual(t, tree.ToString(bytesToStr, 0), givenOneBlock)
+		expectStrEqual(t, tree.ToString(bytesToStrForTest, 0), givenOneBlock)
 	})
 
 	/*
@@ -122,7 +127,7 @@ func TestCreateMerkleTree(t *testing.T) {
 		blocks := [][]byte{[]byte("alpha"), []byte("beta"), []byte("kappa")}
 		tree := NewTree(IdentityHashForTest, blocks)
 
-		expectStrEqual(t, tree.ToString(bytesToStr, 0), givenThreeBlocks)
+		expectStrEqual(t, tree.ToString(bytesToStrForTest, 0), givenThreeBlocks)
 	})
 
 	/*
@@ -142,7 +147,7 @@ func TestCreateMerkleTree(t *testing.T) {
 		blocks := [][]byte{[]byte("alpha"), []byte("beta"), []byte("kappa"), []byte("gamma"), []byte("epsilon"), []byte("omega")}
 		tree := NewTree(IdentityHashForTest, blocks)
 
-		expectStrEqual(t, tree.ToString(bytesToStr, 0), givenSixBlocks)
+		expectStrEqual(t, tree.ToString(bytesToStrForTest, 0), givenSixBlocks)
 	})
 }
 
@@ -155,9 +160,9 @@ func TestAuditProof(t *testing.T) {
 		}
 
 		tree := NewTree(IdentityHashForTest, blocks)
-		checksum := tree.checksumFunc([]byte("alpha"))
+		target := tree.checksumFunc(true, []byte("alpha"))
 
-		proof, err := tree.CreateProof(tree.root.GetChecksum(), checksum)
+		proof, err := tree.CreateProof(target)
 		if err != nil {
 			t.Fail()
 		}
@@ -165,12 +170,12 @@ func TestAuditProof(t *testing.T) {
 		expected := Proof{
 			parts: []*ProofPart{{
 				isRight:  true,
-				checksum: IdentityHashForTest([]byte("beta")),
+				checksum: tree.checksumFunc(true, []byte("beta")),
 			}, {
 				isRight:  true,
-				checksum: IdentityHashForTest([]byte("kappakappa")),
+				checksum: tree.checksumFunc(false, append(tree.checksumFunc(true, []byte("kappa")), tree.checksumFunc(true, []byte("kappa"))...)),
 			}},
-			target: checksum,
+			target: target,
 		}
 
 		if !expected.Equals(proof) {
@@ -191,10 +196,10 @@ func TestAuditProof(t *testing.T) {
 		}
 
 		tree := NewTree(IdentityHashForTest, blocks)
-		checksum := tree.checksumFunc([]byte("omega"))
-		proof, _ := tree.CreateProof(tree.root.GetChecksum(), checksum)
+		target := tree.checksumFunc(true, []byte("omega"))
+		proof, _ := tree.CreateProof(target)
 
-		expectStrEqual(t, proof.ToString(IdentityHashForTest, bytesToStr), proofA)
+		expectStrEqual(t, proof.ToString(tree.checksumFunc, bytesToStrForTest), proofA)
 	})
 
 	t.Run("Tree#VerifyProof", func(t *testing.T) {
@@ -209,9 +214,9 @@ func TestAuditProof(t *testing.T) {
 			proof := &Proof{
 				parts: []*ProofPart{{
 					isRight:  true,
-					checksum: IdentityHashForTest([]byte("beta")),
+					checksum: tree.checksumFunc(true, []byte("beta")),
 				}},
-				target: IdentityHashForTest([]byte("alpha")),
+				target: tree.checksumFunc(true, []byte("alpha")),
 			}
 
 			if !tree.VerifyProof(proof) {
@@ -230,9 +235,9 @@ func TestAuditProof(t *testing.T) {
 			proof := &Proof{
 				parts: []*ProofPart{{
 					isRight:  false,
-					checksum: IdentityHashForTest([]byte("beta")),
+					checksum: tree.checksumFunc(true, []byte("beta")),
 				}},
-				target: IdentityHashForTest([]byte("alpha")),
+				target: tree.checksumFunc(true, []byte("alpha")),
 			}
 
 			if tree.VerifyProof(proof) {
@@ -251,9 +256,9 @@ func TestAuditProof(t *testing.T) {
 			proof := &Proof{
 				parts: []*ProofPart{{
 					isRight:  true,
-					checksum: IdentityHashForTest([]byte("kappa")),
+					checksum: tree.checksumFunc(true, []byte("kappa")),
 				}},
-				target: IdentityHashForTest([]byte("alpha")),
+				target: tree.checksumFunc(true, []byte("alpha")),
 			}
 
 			if tree.VerifyProof(proof) {
@@ -272,9 +277,9 @@ func TestAuditProof(t *testing.T) {
 			proof := &Proof{
 				parts: []*ProofPart{{
 					isRight:  true,
-					checksum: IdentityHashForTest([]byte("beta")),
+					checksum: tree.checksumFunc(true, []byte("beta")),
 				}},
-				target: IdentityHashForTest([]byte("kappa")),
+				target: tree.checksumFunc(true, []byte("kappa")),
 			}
 
 			if tree.VerifyProof(proof) {
@@ -295,9 +300,9 @@ func TestAuditProof(t *testing.T) {
 			}
 
 			tree := NewTree(IdentityHashForTest, blocks)
-			checksum := tree.checksumFunc([]byte("alpha"))
+			target := tree.checksumFunc(true, []byte("alpha"))
 
-			proof, err := tree.CreateProof(tree.root.GetChecksum(), checksum)
+			proof, err := tree.CreateProof(target)
 			if err != nil {
 				t.Fail()
 			}
@@ -318,10 +323,10 @@ func TestHandlesPreimageAttack(t *testing.T) {
 
 	tree := NewTree(Sha256DoubleHash, blocks)
 
-	l := append(tree.checksumFunc([]byte("alpha")), tree.checksumFunc([]byte("beta"))...)
-	r := append(tree.checksumFunc([]byte("kappa")), tree.checksumFunc([]byte("kappa"))...)
+	l := append(tree.checksumFunc(true, []byte("alpha")), tree.checksumFunc(true, []byte("beta"))...)
+	r := append(tree.checksumFunc(true, []byte("kappa")), tree.checksumFunc(true, []byte("kappa"))...)
 
-	tree2 := NewTree(tree.checksumFunc, [][]byte{l, r})
+	tree2 := NewTree(Sha256DoubleHash, [][]byte{l, r})
 
 	if bytes.Equal(tree.root.GetChecksum(), tree2.root.GetChecksum()) {
 		t.Fail()
@@ -336,23 +341,12 @@ func TestDocsCreateAndPrintAuditProof(t *testing.T) {
 	}
 
 	tree := NewTree(Sha256DoubleHash, blocks)
-	checksum := tree.checksumFunc([]byte("alpha"))
-	proof, _ := tree.CreateProof(tree.root.GetChecksum(), checksum)
+	target := tree.checksumFunc(true, []byte("alpha"))
+	proof, _ := tree.CreateProof(target)
 
-	fmt.Println(proof.ToString(Sha256DoubleHash, func(bytes []byte) string {
+	fmt.Println(proof.ToString(tree.checksumFunc, func(bytes []byte) string {
 		return hex.EncodeToString(bytes)[0:16]
 	}))
-
-	/*
-
-		output:
-
-		route from aa86be763e41db7e (leaf) to root:
-
-		aa86be763e41db7e + 05e3bc756e005c1b = 65492c0681df09eb
-		65492c0681df09eb + 3ae3330dcf932104 = 1add1cfdf5df2841
-
-	*/
 }
 
 func TestDocsCreateAndPrintTree(t *testing.T) {
@@ -367,20 +361,6 @@ func TestDocsCreateAndPrintTree(t *testing.T) {
 	fmt.Println(tree.ToString(func(bytes []byte) string {
 		return hex.EncodeToString(bytes)[0:16]
 	}, 0))
-
-	/*
-
-		output:
-
-		(B root: 1add1cfdf5df2841
-		  (B root: 65492c0681df09eb
-			(L root: aa86be763e41db7e)
-			(L root: 05e3bc756e005c1b))
-		  (B root: 3ae3330dcf932104
-			(L root: 4cc9e99389b5f729)
-			(L root: 4cc9e99389b5f729)))
-
-	*/
 }
 
 func TestDocsValidateProof(t *testing.T) {
@@ -395,12 +375,16 @@ func TestDocsValidateProof(t *testing.T) {
 	proof := &Proof{
 		parts: []*ProofPart{{
 			isRight:  true,
-			checksum: Sha256DoubleHash([]byte("beta")),
+			checksum: tree.checksumFunc(true, []byte("beta")),
 		}, {
-			isRight:  true,
-			checksum: Sha256DoubleHash(append(Sha256DoubleHash([]byte("kappa")), Sha256DoubleHash([]byte("kappa"))...)),
+			isRight: true,
+			checksum: tree.checksumFunc(
+				false,
+				append(
+					tree.checksumFunc(true, []byte("kappa")),
+					tree.checksumFunc(true, []byte("kappa"))...)),
 		}},
-		target: Sha256DoubleHash([]byte("alpha")),
+		target: tree.checksumFunc(true, []byte("alpha")),
 	}
 
 	tree.VerifyProof(proof) // true

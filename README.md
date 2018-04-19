@@ -37,13 +37,13 @@ fmt.Println(tree.ToString(func(bytes []byte) string {
 
     output:
 
-    (B root: 1add1cfdf5df2841
-      (B root: 65492c0681df09eb
-        (L root: aa86be763e41db7e)
-        (L root: 05e3bc756e005c1b))
-      (B root: 3ae3330dcf932104
-        (L root: 4cc9e99389b5f729)
-        (L root: 4cc9e99389b5f729)))
+    (B root: 3d4bd4dd0a71aeb3
+      (B root: 8b3ee349b69b427f
+        (L root: c246ba39b1c6c18d)
+        (L root: 24960c3aab1f4b41))
+      (B root: da2f01ea4b9f38ad
+        (L root: 37ce7f776537a298)
+        (L root: 37ce7f776537a298)))
 
  */
 ```
@@ -52,27 +52,27 @@ fmt.Println(tree.ToString(func(bytes []byte) string {
 
 ```go
 blocks := [][]byte{
-	[]byte("alpha"),
-	[]byte("beta"),
-	[]byte("kappa"),
+    []byte("alpha"),
+    []byte("beta"),
+    []byte("kappa"),
 }
 
 tree := NewTree(Sha256DoubleHash, blocks)
-checksum := tree.checksumFunc([]byte("alpha"))
-proof, _ := tree.CreateProof(tree.root.GetChecksum(), checksum)
+checksum := tree.checksumFunc(true, []byte("alpha"))
+proof, _ := tree.CreateProof(checksum)
 
-fmt.Println(proof.ToString(Sha256DoubleHash, func(bytes []byte) string {
-	return hex.EncodeToString(bytes)[0:16]
+fmt.Println(proof.ToString(tree.checksumFunc, func(bytes []byte) string {
+    return hex.EncodeToString(bytes)[0:16]
 }))
 
 /*
 
 	output:
 
-	route from aa86be763e41db7e (leaf) to root:
+	route from c246ba39b1c6c18d (leaf) to root:
 
-	aa86be763e41db7e + 05e3bc756e005c1b = 65492c0681df09eb
-	65492c0681df09eb + 3ae3330dcf932104 = 1add1cfdf5df2841
+    c246ba39b1c6c18d + 24960c3aab1f4b41 = 8b3ee349b69b427f
+    8b3ee349b69b427f + da2f01ea4b9f38ad = 3d4bd4dd0a71aeb3
 
 */
 ```
@@ -91,12 +91,16 @@ tree := NewTree(Sha256DoubleHash, blocks)
 proof := &Proof{
     parts: []*ProofPart{{
         isRight:  true,
-        checksum: Sha256DoubleHash([]byte("beta")),
+        checksum: tree.checksumFunc(true, []byte("beta")),
     }, {
-        isRight:  true,
-        checksum: Sha256DoubleHash(append(Sha256DoubleHash([]byte("kappa")), Sha256DoubleHash([]byte("kappa"))...)),
+        isRight: true,
+        checksum: tree.checksumFunc(
+            false,
+            append(
+                tree.checksumFunc(true, []byte("kappa")),
+                tree.checksumFunc(true, []byte("kappa"))...)),
     }},
-    target: Sha256DoubleHash([]byte("alpha")),
+    target: tree.checksumFunc(true, []byte("alpha")),
 }
 
 tree.VerifyProof(proof) // true
