@@ -67,9 +67,9 @@ fmt.Println(proof.ToString(func(bytes []byte) string {
 
 /*
 
-	output:
+    output:
 
-	route from c246ba39b1c6c18d (leaf) to root:
+    route from c246ba39b1c6c18d (leaf) to root:
 
     c246ba39b1c6c18d + 24960c3aab1f4b41 = 8b3ee349b69b427f
     8b3ee349b69b427f + da2f01ea4b9f38ad = 3d4bd4dd0a71aeb3
