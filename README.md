@@ -9,12 +9,11 @@ Clifton's [_Understanding Merkle Trees - Why use them, who uses them, and how to
 
 *This is alpha software.*
 
-## Acknowledgements
+## Notes
 
-This implementation was inspired by:
-
-- [Marc Clifton's _Understanding Merkle Trees - Why use them, who uses them, and how to use them_][1]
-- [Miguel Mota's merkle-tree][2] (in particular: proof generation)
+- this tree duplicates leaf-hashes such that the cardinality of the tree is always a power of 2
+- this tree prefixes a byte (`0x00` for leaf, `0x01` for branch) to the input to the provided hashing function such that
+the tree is not succeptable to a [second preimage attack][3]
 
 ## Usage
 
@@ -96,5 +95,13 @@ if err != nil {
 tree.VerifyProof(proof) // true
 ```
 
+## Acknowledgements
+
+This implementation was inspired by:
+
+- [Marc Clifton's _Understanding Merkle Trees - Why use them, who uses them, and how to use them_][1]
+- [Miguel Mota's merkle-tree][2] (in particular: proof generation)
+
 [1]: https://www.codeproject.com/Articles/1176140/Understanding-Merkle-Trees-Why-use-them-who-uses-t
 [2]: https://github.com/miguelmota/merkle-tree
+[3]: https://flawed.net.nz/2018/02/21/attacking-merkle-trees-with-a-second-preimage-attack/
