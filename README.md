@@ -14,8 +14,7 @@ Clifton's [_Understanding Merkle Trees - Why use them, who uses them, and how to
 ## Notes
 
 - this tree duplicates leaf-hashes such that the cardinality of the tree is always a power of 2
-- this tree prefixes a byte (`0x00` for leaf, `0x01` for branch) to the input to the provided hashing function such that
-the tree is not succeptable to a [second preimage attack][3]
+- this tree prefixes a byte (`0x00` for leaf, `0x01` for branch) to the input to the provided hashing function
 
 ## Usage
 
