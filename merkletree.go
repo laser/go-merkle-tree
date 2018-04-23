@@ -151,7 +151,6 @@ func (t *Tree) getLeafIdxByChecksum(checksum []byte) int {
 	for i := 0; i < len(t.rows[0]); i++ {
 		if bytes.Equal(checksum, t.rows[0][i].GetChecksum()) {
 			return i
-			break
 		}
 	}
 
