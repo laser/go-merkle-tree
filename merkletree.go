@@ -2,8 +2,8 @@ package merkletree
 
 import (
 	"bytes"
-	"math"
 	"errors"
+	"math"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -70,9 +70,9 @@ func NewTree(providedSumFunc func([]byte) []byte, blocks [][]byte) *Tree {
 	sumFunc := func(isLeaf bool, xs []byte) []byte {
 		if isLeaf {
 			return providedSumFunc(append([]byte{0x00}, xs...))
-		} else {
-			return providedSumFunc(append([]byte{0x01}, xs...))
 		}
+
+		return providedSumFunc(append([]byte{0x01}, xs...))
 	}
 
 	// represents each row in the tree, where rows[0] is the base and rows[len(rows)-1] is the root
@@ -140,7 +140,7 @@ func (t *Tree) VerifyProof(p *Proof) bool {
 			z = t.checksumFunc(false, append(p.parts[i].checksum, z...))
 		}
 
-		index = int(math.Floor(float64(index / 2)))
+		index = int(float64(index / 2))
 	}
 
 	return bytes.Equal(t.root.GetChecksum(), z)
@@ -188,7 +188,7 @@ func (t *Tree) CreateProof(leafChecksum []byte) (*Proof, error) {
 			})
 		}
 
-		index = int(math.Floor(float64(index / 2)))
+		index = int(float64(index / 2))
 	}
 
 	return &Proof{
