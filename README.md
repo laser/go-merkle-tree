@@ -106,3 +106,5 @@ This implementation was inspired by:
 [1]: https://www.codeproject.com/Articles/1176140/Understanding-Merkle-Trees-Why-use-them-who-uses-t
 [2]: https://github.com/miguelmota/merkle-tree
 [3]: https://flawed.net.nz/2018/02/21/attacking-merkle-trees-with-a-second-preimage-attack/
+
+x
